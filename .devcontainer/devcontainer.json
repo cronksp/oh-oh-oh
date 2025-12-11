@@ -1,0 +1,20 @@
+{
+    "name": "oh-oh-oh Dev Container",
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "app",
+    "workspaceFolder": "/workspace",
+    "forwardPorts": [
+        3000,
+        4983
+    ],
+    "postCreateCommand": "npm install && cp .env.local.example .env.local && node -e \"console.log('SYSTEM_MASTER_KEY=' + require('crypto').randomBytes(32).toString('hex'))\" >> .env.local && npx drizzle-kit push",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode",
+                "bradlc.vscode-tailwindcss"
+            ]
+        }
+    }
+}
