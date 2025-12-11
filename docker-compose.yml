@@ -10,6 +10,7 @@ services:
       - "3000:3000"
     volumes:
       - .:/workspace:cached
+      - ./log:/app/log
     command: sleep infinity
     environment:
       - DATABASE_URL=postgresql://postgres:postgres_password@postgres:5432/oh_oh_oh

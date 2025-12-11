@@ -5,7 +5,7 @@ export const logger = pino({
     base: {
         env: process.env.NODE_ENV,
     },
-});
+}, pino.destination({ dest: "./log/app.log", sync: true }));
 
 // export const logger = {
 //     info: (obj: any, msg?: string) => console.log(msg, obj),
