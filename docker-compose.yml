@@ -6,6 +6,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: builder
+    ports:
+      - "3000:3000"
     volumes:
       - .:/workspace:cached
     command: sleep infinity
