@@ -10,7 +10,7 @@
 1.  **Clone the repository**
     ```bash
     git clone <repo-url>
-    cd oh-oh-oh
+    cd whereabouts
     ```
 
 2.  **Install dependencies**

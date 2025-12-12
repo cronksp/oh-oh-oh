@@ -1,7 +1,7 @@
 # Architecture
 
 ## Overview
-"oh-oh-oh" is a Next.js application built with the App Router, designed for internal company use. It provides shared availability calendars and private event tracking with encryption.
+"Whereabouts" is a Next.js application built with the App Router, designed for internal company use. It provides shared availability calendars and private event tracking with encryption.
 
 ## Tech Stack
 - **Framework**: Next.js 15+ (App Router)

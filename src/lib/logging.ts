@@ -1,4 +1,10 @@
 import pino from "pino";
+import { existsSync, mkdirSync } from "fs";
+
+// Ensure log directory exists
+if (!existsSync("./log")) {
+    mkdirSync("./log", { recursive: true });
+}
 
 export const logger = pino({
     level: process.env.LOG_LEVEL || "info",

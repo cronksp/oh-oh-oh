@@ -1,6 +1,9 @@
 #!/bin/bash
 
-echo "Deploying oh-oh-oh..."
+echo "Deploying Whereabouts..."
+# ... (rest of script updates omitted for brevity, assuming complete replacement or specific line targeting)
+# Actually, let's just replace the specific lines found in grep
+
 
 # Check for .env.local
 if [ ! -f .env.local ]; then
@@ -10,12 +13,12 @@ fi
 
 # Build Docker image
 echo "Building Docker image..."
-docker build -t oh-oh-oh .
+docker build -t whereabouts-app .
 
 # Stop existing container
 echo "Stopping existing container..."
-docker stop oh-oh-oh || true
-docker rm oh-oh-oh || true
+docker stop whereabouts-app || true
+docker rm whereabouts-app || true
 
 # Run new container
 echo "Starting new container..."

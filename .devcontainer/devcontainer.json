@@ -1,5 +1,5 @@
 {
-    "name": "oh-oh-oh Dev Container",
+    "name": "Whereabouts Dev Container",
     "dockerComposeFile": "../docker-compose.yml",
     "service": "app",
     "workspaceFolder": "/workspace",
@@ -7,6 +7,9 @@
         3000,
         4983
     ],
+    "features": {
+        "ghcr.io/devcontainers/features/git:1": {}
+    },
     "postCreateCommand": "npm install && cp .env.local.example .env.local && node -e \"console.log('SYSTEM_MASTER_KEY=' + require('crypto').randomBytes(32).toString('hex'))\" >> .env.local && npx drizzle-kit push",
     "customizations": {
         "vscode": {

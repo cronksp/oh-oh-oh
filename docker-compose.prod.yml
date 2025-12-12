@@ -5,17 +5,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: builder
+      target: runner
+    image: whereabouts-app:latest
     ports:
       - "3000:3000"
-    volumes:
-      - .:/workspace:cached
-      - ./log:/app/log
-    command: sleep infinity
     environment:
+      - NODE_ENV=production
       - DATABASE_URL=postgresql://postgres:postgres_password@postgres:5432/whereabouts
     depends_on:
       - postgres
+    restart: always
 
   postgres:
     image: postgres:15-alpine
@@ -25,6 +24,7 @@ services:
       POSTGRES_DB: whereabouts
     volumes:
       - whereabouts_data:/var/lib/postgresql/data
+    restart: always
 
 volumes:
   whereabouts_data:

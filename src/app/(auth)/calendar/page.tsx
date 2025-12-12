@@ -64,7 +64,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                     <TeamAvailabilitySheet users={users} events={events} currentDate={currentDate} />
                     <CalendarFilters groupings={groupings} users={users} />
                     <GroupingManagementDialog groupings={groupings} />
-                    <CreateEventDialog />
+                    <CreateEventDialog groupings={groupings} />
                 </div>
             </div>
 

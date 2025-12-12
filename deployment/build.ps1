@@ -1,5 +1,5 @@
 # Build Script
-Write-Host "Building oh-oh-oh..."
+Write-Host "Building Whereabouts..."
 
 # Install dependencies
 npm install
