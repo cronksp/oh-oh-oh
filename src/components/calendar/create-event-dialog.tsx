@@ -29,22 +29,20 @@ export function CreateEventDialog({ initialDate, open: controlledOpen, onOpenCha
     const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
     const setOpen = onOpenChange || setInternalOpen;
 
-    const defaultStart = initialDate || new Date();
-    // Default to next hour if no initial date provided (start of next hour), otherwise current time + 1 hour? 
-    // Wait, if I click "Create Event" it usually defaults to now.
-    // If I click a day, it defaults to that day.
+    const now = new Date();
+    const nextHourStart = new Date(now);
+    nextHourStart.setHours(nextHourStart.getHours() + 1, 0, 0, 0);
 
-    // To match behaviors:
-    // If initialDate is provided, it's usually 00:00 of that day (because of MonthView click).
-    // Let's set default start time to 9am if it's 00:00? Or just leave it. 
-    // The original code did:
-    // const defaultStart = initialDate || new Date();
-    // const defaultEnd = new Date(defaultStart.getTime() + 60 * 60 * 1000);
+    const defaultStart = initialDate ? new Date(initialDate) : nextHourStart;
 
-    // However, if initialDate is coming from "click on day", it might be 00:00.
-    // Let's stick to original logic.
+    // Apply the time from the next closest hour to the selected date
+    // This ensures that even if a date is selected, the time defaults to the next hour relative to the user
+    if (initialDate) {
+        defaultStart.setHours(nextHourStart.getHours(), 0, 0, 0);
+    }
 
-    const defaultEnd = new Date(defaultStart.getTime() + 60 * 60 * 1000); // 1 hour later
+    const defaultEnd = new Date(defaultStart);
+    defaultEnd.setHours(defaultStart.getHours() + 1);
 
     const defaultValues: EventFormValues = {
         title: "",
