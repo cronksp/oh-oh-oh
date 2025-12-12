@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Calendar as CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -131,7 +131,7 @@ export function EventForm({ defaultValues, onSubmit, groupings, submitLabel }: E
                                                     !field.value && "text-muted-foreground"
                                                 )}
                                             >
-                                                {field.value ? (
+                                                {field.value && isValid(field.value) ? (
                                                     format(field.value, "PPP")
                                                 ) : (
                                                     <span>Pick a date</span>
@@ -160,7 +160,7 @@ export function EventForm({ defaultValues, onSubmit, groupings, submitLabel }: E
                                     </PopoverContent>
                                 </Popover>
                                 <Select
-                                    value={field.value ? format(field.value, "HH:mm") : undefined}
+                                    value={field.value && isValid(field.value) ? format(field.value, "HH:mm") : undefined}
                                     onValueChange={(value) => {
                                         if (!field.value) return;
                                         const [hours, minutes] = value.split(":").map(Number);
@@ -214,7 +214,7 @@ export function EventForm({ defaultValues, onSubmit, groupings, submitLabel }: E
                                                     !field.value && "text-muted-foreground"
                                                 )}
                                             >
-                                                {field.value ? (
+                                                {field.value && isValid(field.value) ? (
                                                     format(field.value, "PPP")
                                                 ) : (
                                                     <span>Pick a date</span>
@@ -247,7 +247,7 @@ export function EventForm({ defaultValues, onSubmit, groupings, submitLabel }: E
                                     </PopoverContent>
                                 </Popover>
                                 <Select
-                                    value={field.value ? format(field.value, "HH:mm") : undefined}
+                                    value={field.value && isValid(field.value) ? format(field.value, "HH:mm") : undefined}
                                     onValueChange={(value) => {
                                         if (!field.value) return;
                                         const [hours, minutes] = value.split(":").map(Number);
