@@ -7,7 +7,7 @@ if (!(Test-Path "whereabouts-app.tar")) {
 docker load -i whereabouts-app.tar
 
 Write-Host "Step 2: Starting Application..." -ForegroundColor Cyan
-docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+docker-compose -f docker/docker-compose.prod.yml up -d --remove-orphans
 
 Write-Host "Waiting for database to start..." -ForegroundColor Cyan
 Start-Sleep -Seconds 5

@@ -19,7 +19,7 @@ VS Code will build the container, install standard VS Code extensions, configure
 ## Key Concepts
 
 ### Volume Mounting
-In Development mode (`devcontainer.json` -> `docker-compose.yml`), your local folder is **bound** (mounted) to `/workspace` inside the container.
+In Development mode (`devcontainer.json` -> `docker/docker-compose.yml`), your local folder is **bound** (mounted) to `/workspace` inside the container.
 -   **Changes you make in VS Code appear instantly inside the container.**
 -   **Changes the app makes (logs, files) appear instantly on your machine.**
 

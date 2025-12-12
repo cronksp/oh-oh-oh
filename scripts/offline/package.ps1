@@ -1,6 +1,6 @@
 # Package for Offline Deployment
 Write-Host "Step 1: Building Image..." -ForegroundColor Cyan
-docker-compose -f docker-compose.prod.yml build
+docker-compose -f docker/docker-compose.prod.yml build
 
 Write-Host "Step 2: Saving Image to .tar file..." -ForegroundColor Cyan
 docker save -o whereabouts-app.tar whereabouts-app:latest

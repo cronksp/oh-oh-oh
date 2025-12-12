@@ -12,9 +12,9 @@ If your target server has internet access, you can build and run everything dire
 1.  Can Git pull the repo to the server.
 2.  Run the deployment script:
     ```powershell
-    ./scripts/deploy-prod.ps1
+    ./scripts/online/deploy.ps1
     ```
-    *(Or on Linux/Mac: `docker-compose -f docker-compose.prod.yml up -d --build`)*
+    *(Or on Linux/Mac: `docker-compose -f docker/docker-compose.prod.yml up -d --build`)*
 
 This will:
 1.  Build the `whereabouts-app` image.
@@ -30,7 +30,7 @@ If your target server CANNOT reach the internet (to pull base images like `node:
 On your laptop (with internet):
 1.  Run the packaging script:
     ```powershell
-    ./scripts/package-offline.ps1
+    ./scripts/offline/package.ps1
     ```
     This creates a file named `whereabouts-app.tar`.
 
@@ -38,11 +38,11 @@ On your laptop (with internet):
 Copy `whereabouts-app.tar` to your USB drive or secure transfer method and move it to the offline server.
 
 ### Step 3: Load and Run on Server
-On the offline server (ensure `whereabouts-app.tar`, `docker-compose.prod.yml`, and `scripts/` are present):
+On the offline server (ensure `whereabouts-app.tar`, `docker/docker-compose.prod.yml`, and `scripts/` are present):
 
 1.  Run the install script:
     ```powershell
-    ./scripts/install-offline.ps1
+    ./scripts/offline/install.ps1
     ```
 
 This script will:

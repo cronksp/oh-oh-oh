@@ -1,6 +1,6 @@
 # Deploy Production (Internet Access Required to pull images)
 Write-Host "Deploying Whereabouts Production Environment..." -ForegroundColor Green
-docker-compose -f docker-compose.prod.yml up -d --build --remove-orphans
+docker-compose -f docker/docker-compose.prod.yml up -d --build --remove-orphans
 
 Write-Host "Waiting for database to start..." -ForegroundColor Cyan
 Start-Sleep -Seconds 5
