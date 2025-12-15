@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { format, isSameDay, differenceInMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Event } from "@/lib/db/schema";
+import { Event, EventType } from "@/lib/db/schema";
 import { EventDetailPopover } from "./event-detail-popover";
 import { EditEventDialog } from "./edit-event-dialog";
 
@@ -20,9 +20,10 @@ interface DayViewProps {
     currentDate: Date;
     events: EventWithPermissions[];
     userId: string;
+    eventTypes: EventType[];
 }
 
-export function DayView({ currentDate, events, userId }: DayViewProps) {
+export function DayView({ currentDate, events, userId, eventTypes }: DayViewProps) {
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
 
     const hours = Array.from({ length: 24 }, (_, i) => i);
@@ -131,6 +132,7 @@ export function DayView({ currentDate, events, userId }: DayViewProps) {
                     event={editingEvent}
                     open={!!editingEvent}
                     onOpenChange={(open) => !open && setEditingEvent(null)}
+                    eventTypes={eventTypes}
                 />
             )}
         </>

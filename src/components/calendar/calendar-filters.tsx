@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Filter } from "lucide-react";
 
 import { UserSelector } from "@/components/user-selector";
+import { EventType } from "@/lib/db/schema";
 
 interface Grouping {
     id: string;
@@ -28,9 +29,10 @@ interface User {
 interface CalendarFiltersProps {
     groupings: Grouping[];
     users: User[];
+    eventTypes: EventType[];
 }
 
-export function CalendarFilters({ groupings, users }: CalendarFiltersProps) {
+export function CalendarFilters({ groupings, users, eventTypes }: CalendarFiltersProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
 

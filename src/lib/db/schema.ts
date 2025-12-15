@@ -57,6 +57,17 @@ export const groupings = pgTable("groupings", {
     name: text("name").notNull(),
     description: text("description"),
     color: text("color"), // Hex code
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }), // Nullable. Null = Public.
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const eventTypes = pgTable("event_types", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull().unique(),
+    key: text("key").notNull().unique(), // e.g. "work_meeting" (for code refs)
+    color: text("color"),
+    userId: uuid("user_id").references(() => users.id), // Nullable for System types. Null = Public System Type.
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -71,6 +82,7 @@ export const events = pgTable("events", {
     isPrivate: boolean("is_private").default(false).notNull(),
     isOutOfOffice: boolean("is_out_of_office").default(false).notNull(),
     eventType: eventTypeEnum("event_type").notNull(),
+    eventTypeId: uuid("event_type_id").references(() => eventTypes.id), // Nullable during migration, should be notNull eventually
     metadata: text("metadata"), // JSON string, encrypted if private
     encryptedData: text("encrypted_data"), // Stores title/desc/metadata if private
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -104,6 +116,7 @@ export const eventPermissions = pgTable("event_permissions", {
     pk: { columns: [t.eventId, t.userId] },
 }));
 
+export type EventType = typeof eventTypes.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Grouping = typeof groupings.$inferSelect;

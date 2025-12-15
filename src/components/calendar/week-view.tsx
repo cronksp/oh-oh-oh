@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, differenceInMinutes } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Event } from "@/lib/db/schema";
+import { Event, EventType } from "@/lib/db/schema";
 import { EventDetailPopover } from "./event-detail-popover";
 import { EditEventDialog } from "./edit-event-dialog";
 
@@ -20,9 +20,10 @@ interface WeekViewProps {
     currentDate: Date;
     events: EventWithPermissions[];
     userId: string;
+    eventTypes: EventType[];
 }
 
-export function WeekView({ currentDate, events, userId }: WeekViewProps) {
+export function WeekView({ currentDate, events, userId, eventTypes }: WeekViewProps) {
     const startDate = startOfWeek(currentDate);
     const endDate = endOfWeek(currentDate);
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
@@ -143,6 +144,7 @@ export function WeekView({ currentDate, events, userId }: WeekViewProps) {
                     event={editingEvent}
                     open={!!editingEvent}
                     onOpenChange={(open) => !open && setEditingEvent(null)}
+                    eventTypes={eventTypes}
                 />
             )}
         </>

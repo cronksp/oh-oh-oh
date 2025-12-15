@@ -14,15 +14,17 @@ import {
 } from "@/components/ui/dialog";
 import { createEvent } from "@/features/calendar/actions";
 import { EventForm, EventFormValues } from "./event-form";
+import { EventType } from "@/lib/db/schema";
 
 interface CreateEventDialogProps {
     initialDate?: Date;
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
     groupings?: { id: string; name: string; color: string | null }[];
+    eventTypes?: EventType[];
 }
 
-export function CreateEventDialog({ initialDate, open: controlledOpen, onOpenChange, groupings = [] }: CreateEventDialogProps = {}) {
+export function CreateEventDialog({ initialDate, open: controlledOpen, onOpenChange, groupings = [], eventTypes = [] }: CreateEventDialogProps = {}) {
     const [internalOpen, setInternalOpen] = useState(false);
 
     // Use controlled open state if provided, otherwise use internal state
@@ -51,7 +53,7 @@ export function CreateEventDialog({ initialDate, open: controlledOpen, onOpenCha
         endTime: defaultEnd,
         isPrivate: false,
         isOutOfOffice: false,
-        eventType: "work_meeting",
+        eventTypeId: eventTypes?.find(et => et.key === "work_meeting")?.id || eventTypes?.[0]?.id || "",
         groupingIds: [],
     };
 
@@ -81,6 +83,7 @@ export function CreateEventDialog({ initialDate, open: controlledOpen, onOpenCha
                     defaultValues={defaultValues}
                     onSubmit={onSubmit}
                     groupings={groupings}
+                    eventTypes={eventTypes}
                     submitLabel="Add Event"
                 />
             </DialogContent>

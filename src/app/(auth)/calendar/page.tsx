@@ -1,5 +1,5 @@
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from "date-fns";
-import { getEventsWithPermissions, getGroupings } from "@/features/calendar/actions";
+import { getEventsWithPermissions, getGroupings, getEventTypes } from "@/features/calendar/actions";
 import { getUsersPublic } from "@/features/users/actions";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
@@ -50,10 +50,11 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
 
     const filterUserId = typeof params.filterUserId === "string" ? params.filterUserId : undefined;
 
-    const [events, groupings, users] = await Promise.all([
+    const [events, groupings, users, eventTypes] = await Promise.all([
         getEventsWithPermissions(start, end, { myStuffOnly, groupingIds, filterUserId }),
         getGroupings(),
         getUsersPublic(),
+        getEventTypes(),
     ]);
 
     return (
@@ -62,16 +63,18 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                 <CalendarHeader currentDate={currentDate} view={view} />
                 <div className="flex items-center gap-2">
                     <TeamAvailabilitySheet users={users} events={events} currentDate={currentDate} />
-                    <CalendarFilters groupings={groupings} users={users} />
-                    <GroupingManagementDialog groupings={groupings} />
-                    <CreateEventDialog groupings={groupings} />
+                    <CalendarFilters groupings={groupings} users={users} eventTypes={eventTypes} />
+                    <GroupingManagementDialog groupings={groupings} eventTypes={eventTypes} />
+                    <CreateEventDialog groupings={groupings} eventTypes={eventTypes} />
                 </div>
             </div>
 
             <div className="flex-1 min-h-0">
-                {view === "month" && <MonthView currentDate={currentDate} events={events} userId={session.user.id} groupings={groupings} />}
-                {view === "week" && <WeekView currentDate={currentDate} events={events} userId={session.user.id} />}
-                {view === "day" && <DayView currentDate={currentDate} events={events} userId={session.user.id} />}
+                <div className="flex-1 min-h-0">
+                    {view === "month" && <MonthView currentDate={currentDate} events={events} userId={session.user.id} groupings={groupings} eventTypes={eventTypes} />}
+                    {view === "week" && <WeekView currentDate={currentDate} events={events} userId={session.user.id} eventTypes={eventTypes} />}
+                    {view === "day" && <DayView currentDate={currentDate} events={events} userId={session.user.id} eventTypes={eventTypes} />}
+                </div>
             </div>
         </div>
     );

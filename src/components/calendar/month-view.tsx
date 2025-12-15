@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, format, isSameMonth, isSameDay } from "date-fns";
 import { cn } from "@/lib/utils";
-import { Event } from "@/lib/db/schema";
+import { Event, EventType } from "@/lib/db/schema";
 import { EventDetailPopover } from "./event-detail-popover";
 import { EditEventDialog } from "./edit-event-dialog";
 import { CreateEventDialog } from "./create-event-dialog";
@@ -24,9 +24,10 @@ interface MonthViewProps {
     events: EventWithPermissions[];
     userId: string;
     groupings: { id: string; name: string; color: string | null }[];
+    eventTypes: EventType[];
 }
 
-export function MonthView({ currentDate, events, userId, groupings }: MonthViewProps) {
+export function MonthView({ currentDate, events, userId, groupings, eventTypes }: MonthViewProps) {
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(monthStart);
     const startDate = startOfWeek(monthStart);
@@ -128,6 +129,7 @@ export function MonthView({ currentDate, events, userId, groupings }: MonthViewP
                     open={!!editingEvent}
                     onOpenChange={(open) => !open && setEditingEvent(null)}
                     groupings={groupings}
+                    eventTypes={eventTypes}
                 />
             )}
 
@@ -137,6 +139,7 @@ export function MonthView({ currentDate, events, userId, groupings }: MonthViewP
                     open={!!creatingEventForDate}
                     onOpenChange={(open) => !open && setCreatingEventForDate(null)}
                     groupings={groupings}
+                    eventTypes={eventTypes}
                 />
             )}
         </>

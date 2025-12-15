@@ -1,10 +1,10 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { events, users, eventGroupings, groupings, groupAdmins, eventPermissions } from "@/lib/db/schema";
+import { events, users, eventGroupings, groupings, groupAdmins, eventPermissions, eventTypes } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth/session";
 import { decryptUserKey, encryptData, decryptData } from "@/lib/crypto";
-import { eq, and, gte, lte, getTableColumns } from "drizzle-orm";
+import { eq, and, gte, lte, getTableColumns, isNull, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 interface CreateEventData {
@@ -14,7 +14,8 @@ interface CreateEventData {
     endTime: Date;
     isPrivate: boolean;
     isOutOfOffice: boolean;
-    eventType: "vacation" | "sick_leave" | "project_travel" | "personal_travel" | "personal_appointment" | "work_meeting" | "work_gathering";
+    eventTypeId: string;
+    // eventType: "vacation" | "sick_leave" | "project_travel" | "personal_travel" | "personal_appointment" | "work_meeting" | "work_gathering";
     groupingIds?: string[];
 }
 
@@ -24,7 +25,7 @@ export async function createEvent(data: CreateEventData) {
         throw new Error("Unauthorized");
     }
 
-    const { title, description, startTime, endTime, isPrivate, isOutOfOffice, eventType, groupingIds } = data;
+    const { title, description, startTime, endTime, isPrivate, isOutOfOffice, eventTypeId, groupingIds } = data;
 
     let finalTitle = title;
     let finalDescription = description;
@@ -49,6 +50,10 @@ export async function createEvent(data: CreateEventData) {
         finalDescription = "";
     }
 
+    // Fetch event type to get the key for backward compatibility
+    const [et] = await db.select().from(eventTypes).where(eq(eventTypes.id, data.eventTypeId));
+    if (!et) throw new Error("Invalid event type");
+
     const [newEvent] = await db.insert(events).values({
         userId: session.user.id,
         title: finalTitle,
@@ -57,7 +62,8 @@ export async function createEvent(data: CreateEventData) {
         endTime: new Date(endTime),
         isPrivate,
         isOutOfOffice,
-        eventType,
+        eventType: et.key as any, // Backward compatibility
+        eventTypeId: data.eventTypeId,
         encryptedData,
     }).returning();
 
@@ -99,6 +105,7 @@ export async function getEvents(start: Date, end: Date, options?: { myStuffOnly?
         ownerName: users.name,
     }).from(events)
         .leftJoin(users, eq(events.userId, users.id))
+        .leftJoin(eventTypes, eq(events.eventTypeId, eventTypes.id))
         .where(and(...conditions));
 
     // Filter by groupings if specified
@@ -185,13 +192,34 @@ export async function getEventsWithPermissions(start: Date, end: Date, options?:
 // Grouping Actions
 
 export async function getGroupings() {
-    return await db.select().from(groupings);
+    const session = await getSession();
+    const userId = session?.user?.id;
+
+    // Return Public groupings (userId is null) AND Private groupings owned by user
+    if (userId) {
+        return await db.select().from(groupings).where(
+            or(
+                isNull(groupings.userId),
+                eq(groupings.userId, userId)
+            )
+        );
+    }
+
+    return await db.select().from(groupings).where(isNull(groupings.userId));
 }
 
-export async function createGrouping(data: { name: string; color: string }) {
+export async function createGrouping(data: { name: string; color: string; isPrivate?: boolean }) {
+    const session = await getSession();
+    const userId = session?.user?.id;
+
+    // If private, require user. If public, technically anyone can add public grouping for now? 
+    // Or maybe we restrict public grouping creation to admins? User didn't specify.
+    // For now, allow both.
+
     const [newGrouping] = await db.insert(groupings).values({
         name: data.name,
         color: data.color,
+        userId: data.isPrivate && userId ? userId : null,
     }).returning();
     revalidatePath("/calendar");
     return newGrouping;
@@ -232,6 +260,13 @@ export async function updateEvent(eventId: string, data: Partial<CreateEventData
 
     if (data.isOutOfOffice !== undefined) {
         updateData.isOutOfOffice = data.isOutOfOffice;
+    }
+
+    if (data.eventTypeId) {
+        const [et] = await db.select().from(eventTypes).where(eq(eventTypes.id, data.eventTypeId));
+        if (!et) throw new Error("Invalid event type");
+        updateData.eventTypeId = data.eventTypeId;
+        updateData.eventType = et.key;
     }
 
     await db.update(events).set(updateData).where(eq(events.id, eventId));
@@ -442,4 +477,65 @@ export async function getGroupAdmins(groupingId: string) {
 
 export async function getUserManagedGroups(userId: string) {
     return await db.select().from(groupAdmins).where(eq(groupAdmins.userId, userId));
+}
+
+// Event Types Management
+export async function getEventTypes() {
+    // 1. Fetch system types
+    const systemTypes = await db.select().from(eventTypes).where(isNull(eventTypes.userId));
+
+    // Auto-seed if empty
+    if (systemTypes.length === 0) {
+        const defaults = [
+            { name: "Work Meeting", key: "work_meeting", color: "#3b82f6" },
+            { name: "Vacation", key: "vacation", color: "#22c55e" },
+            { name: "Sick Leave", key: "sick_leave", color: "#ef4444" },
+            { name: "Project Travel", key: "project_travel", color: "#a855f7" },
+            { name: "Personal Travel", key: "personal_travel", color: "#ec4899" },
+            { name: "Personal Appointment", key: "personal_appointment", color: "#eab308" },
+            { name: "Work Gathering", key: "work_gathering", color: "#f97316" },
+        ];
+
+        await db.insert(eventTypes).values(defaults).onConflictDoNothing();
+        // Re-fetch
+        return await db.select().from(eventTypes).where(isNull(eventTypes.userId));
+    }
+
+    const session = await getSession();
+    const userId = session?.user?.id;
+
+    if (userId) {
+        const myTypes = await db.select().from(eventTypes).where(eq(eventTypes.userId, userId));
+        return [...systemTypes, ...myTypes];
+    }
+
+    return systemTypes;
+}
+
+export async function createEventType(data: { name: string; color: string; isPrivate: boolean }) {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    // System type (isPrivate=false) requires Admin
+    if (!data.isPrivate) {
+        const [user] = await db.select().from(users).where(eq(users.id, session.user.id));
+        if (user?.role !== "admin") throw new Error("Only admins can create system event types");
+
+        await db.insert(eventTypes).values({
+            name: data.name,
+            key: data.name.toLowerCase().replace(/\s+/g, '_'),
+            color: data.color,
+            userId: null
+        });
+    } else {
+        // Private type
+        await db.insert(eventTypes).values({
+            name: data.name,
+            key: data.name.toLowerCase().replace(/\s+/g, '_') + '_' + session.user.id.slice(0, 8),
+            color: data.color,
+            userId: session.user.id
+        });
+    }
+
+    revalidatePath("/calendar");
 }

@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format, isValid } from "date-fns";
+import { EventType } from "@/lib/db/schema";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -35,7 +36,7 @@ export const eventFormSchema = z.object({
     description: z.string().optional(),
     startTime: z.date(),
     endTime: z.date(),
-    eventType: z.enum(["vacation", "sick_leave", "project_travel", "personal_travel", "personal_appointment", "work_meeting", "work_gathering"]),
+    eventTypeId: z.string().min(1, "Event Type is required"),
     isOutOfOffice: z.boolean().default(false),
     isPrivate: z.boolean().default(false),
     groupingIds: z.array(z.string()).default([]),
@@ -50,10 +51,11 @@ interface EventFormProps {
     defaultValues: EventFormValues;
     onSubmit: (values: EventFormValues) => Promise<void>;
     groupings: { id: string; name: string; color: string | null }[];
+    eventTypes: EventType[];
     submitLabel: string;
 }
 
-export function EventForm({ defaultValues, onSubmit, groupings, submitLabel }: EventFormProps) {
+export function EventForm({ defaultValues, onSubmit, groupings, eventTypes, submitLabel }: EventFormProps) {
     const [startDateOpen, setStartDateOpen] = useState(false);
     const [endDateOpen, setEndDateOpen] = useState(false);
 
@@ -286,7 +288,7 @@ export function EventForm({ defaultValues, onSubmit, groupings, submitLabel }: E
                 />
                 <FormField
                     control={form.control}
-                    name="eventType"
+                    name="eventTypeId"
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel>Type</FormLabel>
@@ -297,13 +299,17 @@ export function EventForm({ defaultValues, onSubmit, groupings, submitLabel }: E
                                     </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                    <SelectItem value="work_meeting">Work Meeting</SelectItem>
-                                    <SelectItem value="vacation">Vacation</SelectItem>
-                                    <SelectItem value="sick_leave">Sick Leave</SelectItem>
-                                    <SelectItem value="personal_appointment">Personal Appointment</SelectItem>
-                                    <SelectItem value="project_travel">Project Travel</SelectItem>
-                                    <SelectItem value="personal_travel">Personal Travel</SelectItem>
-                                    <SelectItem value="work_gathering">Work Gathering</SelectItem>
+                                    {eventTypes.map((type) => (
+                                        <SelectItem key={type.id} value={type.id}>
+                                            <div className="flex items-center gap-2">
+                                                <div
+                                                    className="w-3 h-3 rounded-full"
+                                                    style={{ backgroundColor: type.color || "#ccc" }}
+                                                />
+                                                {type.name}
+                                            </div>
+                                        </SelectItem>
+                                    ))}
                                 </SelectContent>
                             </Select>
                             <FormMessage />

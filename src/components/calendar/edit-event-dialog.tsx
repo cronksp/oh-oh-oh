@@ -10,7 +10,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { updateEvent } from "@/features/calendar/actions";
-import { Event } from "@/lib/db/schema";
+import { Event, EventType } from "@/lib/db/schema";
 import { EventForm, EventFormValues } from "./event-form";
 
 // Extend Event type to include groupingIds which are attached at runtime
@@ -23,15 +23,16 @@ interface EditEventDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     groupings?: { id: string; name: string; color: string | null }[];
+    eventTypes?: EventType[];
 }
 
-export function EditEventDialog({ event, open, onOpenChange, groupings = [] }: EditEventDialogProps) {
+export function EditEventDialog({ event, open, onOpenChange, groupings = [], eventTypes = [] }: EditEventDialogProps) {
     const defaultValues: EventFormValues = {
         title: event.title,
         description: event.description || "",
         startTime: new Date(event.startTime),
         endTime: new Date(event.endTime),
-        eventType: event.eventType,
+        eventTypeId: event.eventTypeId || eventTypes.find(et => et.key === event.eventType)?.id || "",
         isOutOfOffice: event.isOutOfOffice,
         isPrivate: event.isPrivate,
         groupingIds: event.groupingIds || [],
@@ -60,6 +61,7 @@ export function EditEventDialog({ event, open, onOpenChange, groupings = [] }: E
                     defaultValues={defaultValues}
                     onSubmit={onSubmit}
                     groupings={groupings}
+                    eventTypes={eventTypes}
                     submitLabel="Edit Event"
                 />
             </DialogContent>
