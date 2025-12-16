@@ -248,6 +248,9 @@ function EventTypesTab({ eventTypes }: { eventTypes: EventType[] }) {
         }
     }
 
+    const systemTypes = eventTypes.filter(t => !t.userId);
+    const customTypes = eventTypes.filter(t => !!t.userId);
+
     return (
         <div className="space-y-6">
             <Form {...form}>
@@ -308,20 +311,48 @@ function EventTypesTab({ eventTypes }: { eventTypes: EventType[] }) {
 
             <div className="space-y-2">
                 <h4 className="text-sm font-medium">Existing Types</h4>
-                <div className="max-h-[200px] overflow-y-auto space-y-2 pr-1">
-                    {eventTypes.map((type) => (
-                        <div key={type.id} className="flex items-center justify-between p-2 rounded-md border bg-slate-50 dark:bg-slate-900">
-                            <div className="flex items-center gap-2">
-                                <div
-                                    className="w-3 h-3 rounded-full"
-                                    style={{ backgroundColor: type.color || "#ccc" }}
-                                />
-                                <span className="text-sm font-medium">{type.name}</span>
-                                {type.userId && <Lock className="w-3 h-3 text-muted-foreground ml-1" />}
+                <div className="max-h-[300px] overflow-y-auto space-y-4 pr-1">
+                    {/* System Types */}
+                    {systemTypes.length > 0 && (
+                        <div>
+                            <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">System Types</h5>
+                            <div className="space-y-2">
+                                {systemTypes.map((type) => (
+                                    <div key={type.id} className="flex items-center justify-between p-2 rounded-md border bg-slate-50 dark:bg-slate-900">
+                                        <div className="flex items-center gap-2">
+                                            <div
+                                                className="w-3 h-3 rounded-full"
+                                                style={{ backgroundColor: type.color || "#ccc" }}
+                                            />
+                                            <span className="text-sm font-medium">{type.name}</span>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                            {/* Deletion not implemented yet for types, can add later if requested */}
                         </div>
-                    ))}
+                    )}
+
+                    {/* Custom Types */}
+                    <div>
+                        <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">My Custom Types</h5>
+                        <div className="space-y-2">
+                            {customTypes.map((type) => (
+                                <div key={type.id} className="flex items-center justify-between p-2 rounded-md border bg-slate-50 dark:bg-slate-900">
+                                    <div className="flex items-center gap-2">
+                                        <div
+                                            className="w-3 h-3 rounded-full"
+                                            style={{ backgroundColor: type.color || "#ccc" }}
+                                        />
+                                        <span className="text-sm font-medium">{type.name}</span>
+                                        <Lock className="w-3 h-3 text-muted-foreground ml-1" />
+                                    </div>
+                                </div>
+                            ))}
+                            {customTypes.length === 0 && (
+                                <p className="text-sm text-muted-foreground italic pl-2">No custom types yet.</p>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

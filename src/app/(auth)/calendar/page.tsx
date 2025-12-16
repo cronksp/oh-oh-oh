@@ -1,6 +1,6 @@
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, endOfDay } from "date-fns";
 import { getEventsWithPermissions, getGroupings, getEventTypes } from "@/features/calendar/actions";
-import { getUsersPublic } from "@/features/users/actions";
+import { getUsers } from "@/features/users/actions";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { MonthView } from "@/components/calendar/month-view";
@@ -53,7 +53,7 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
     const [events, groupings, users, eventTypes] = await Promise.all([
         getEventsWithPermissions(start, end, { myStuffOnly, groupingIds, filterUserId }),
         getGroupings(),
-        getUsersPublic(),
+        getUsers(),
         getEventTypes(),
     ]);
 

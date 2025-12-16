@@ -44,6 +44,8 @@ export const eventFormSchema = z.object({
     isOutOfOffice: z.boolean().default(false),
     isPrivate: z.boolean().default(false),
     groupingIds: z.array(z.string()).default([]),
+    attendeeIds: z.array(z.string()).default([]),
+    teamIds: z.array(z.string()).default([]),
 }).refine((data) => data.endTime > data.startTime, {
     message: "End time must be after start time",
     path: ["endTime"],
@@ -57,9 +59,11 @@ interface EventFormProps {
     groupings: { id: string; name: string; color: string | null }[];
     eventTypes: EventType[];
     submitLabel: string;
+    users: { id: string; name: string; email: string }[];
+    teams: { id: string; name: string }[];
 }
 
-export function EventForm({ defaultValues, onSubmit, groupings, eventTypes, submitLabel }: EventFormProps) {
+export function EventForm({ defaultValues, onSubmit, groupings, eventTypes, submitLabel, users, teams }: EventFormProps) {
     const [startDateOpen, setStartDateOpen] = useState(false);
     const [endDateOpen, setEndDateOpen] = useState(false);
 

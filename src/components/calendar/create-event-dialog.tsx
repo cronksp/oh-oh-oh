@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { createEvent } from "@/features/calendar/actions";
+import { getUsers } from "@/features/users/actions";
+import { getTeams } from "@/features/teams/actions";
 import { EventForm, EventFormValues } from "./event-form";
 import { EventType } from "@/lib/db/schema";
 
@@ -26,10 +28,27 @@ interface CreateEventDialogProps {
 
 export function CreateEventDialog({ initialDate, open: controlledOpen, onOpenChange, groupings = [], eventTypes = [] }: CreateEventDialogProps = {}) {
     const [internalOpen, setInternalOpen] = useState(false);
+    const [users, setUsers] = useState<{ id: string; name: string; email: string }[]>([]);
+    const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
 
-    // Use controlled open state if provided, otherwise use internal state
     const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
     const setOpen = onOpenChange || setInternalOpen;
+
+    useEffect(() => {
+        // Fetch data when component mounts
+        let mounted = true;
+        Promise.all([
+            getUsers(),
+            getTeams()
+        ]).then(([usersData, teamsData]) => {
+            if (mounted) {
+                setUsers(usersData);
+                // Flatten teams for the dropdown? getTeams returns { publicTeams, myPrivateTeams }
+                setTeams([...teamsData.publicTeams, ...teamsData.myPrivateTeams]);
+            }
+        });
+        return () => { mounted = false; };
+    }, []);
 
     const now = new Date();
     const nextHourStart = new Date(now);
@@ -55,6 +74,8 @@ export function CreateEventDialog({ initialDate, open: controlledOpen, onOpenCha
         isOutOfOffice: false,
         eventTypeId: eventTypes?.find(et => et.key === "work_meeting")?.id || eventTypes?.[0]?.id || "",
         groupingIds: [],
+        attendeeIds: [],
+        teamIds: [],
     };
 
     async function onSubmit(values: EventFormValues) {
@@ -85,6 +106,8 @@ export function CreateEventDialog({ initialDate, open: controlledOpen, onOpenCha
                     groupings={groupings}
                     eventTypes={eventTypes}
                     submitLabel="Add Event"
+                    users={users}
+                    teams={teams}
                 />
             </DialogContent>
         </Dialog>

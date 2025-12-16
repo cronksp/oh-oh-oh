@@ -2,19 +2,37 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Calendar, Settings, Shield } from "lucide-react";
+import { Calendar, Settings, Shield, Users, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ModeToggle } from "@/components/ui/mode-toggle";
 import { LogoutButton } from "@/components/logout-button";
+import { getMe } from "@/features/users/actions";
+import { useState, useEffect } from "react";
 
 const navItems = [
     { href: "/calendar", label: "Calendar", icon: Calendar },
+    { href: "/teams", label: "Teams", icon: Users },
+    { href: "/activity", label: "Activity", icon: Activity },
     { href: "/settings", label: "Settings", icon: Settings },
     { href: "/admin", label: "Admin", icon: Shield, adminOnly: true },
 ];
 
 export function AppSidebar() {
     const pathname = usePathname();
+    const [user, setUser] = useState<{ role: "admin" | "user" } | null>(null);
+
+    useEffect(() => {
+        getMe().then((u) => {
+            if (u) setUser(u as any);
+        });
+    }, []);
+
+    const filteredNavItems = navItems.filter(item => {
+        if (item.adminOnly) {
+            return user?.role === "admin";
+        }
+        return true;
+    });
 
     return (
         <aside className="hidden w-64 flex-col border-r bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-xl md:flex">
@@ -25,7 +43,7 @@ export function AppSidebar() {
             </div>
             <div className="flex-1 overflow-y-auto py-4">
                 <nav className="grid gap-1 px-2">
-                    {navItems.map((item) => {
+                    {filteredNavItems.map((item) => {
                         const Icon = item.icon;
                         const isActive = pathname === item.href;
                         return (

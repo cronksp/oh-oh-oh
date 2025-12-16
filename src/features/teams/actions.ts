@@ -1,9 +1,9 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { teams, teamMembers, users } from "@/lib/db/schema";
+import { teams, teamMembers, users, activityLog } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth/session";
-import { eq, and, like, or, isNull } from "drizzle-orm";
+import { eq, and, like, or, isNull, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function createTeam(data: { name: string; parentTeamId?: string | null; isPrivate?: boolean }) {
@@ -51,6 +51,15 @@ export async function createTeam(data: { name: string; parentTeamId?: string | n
         isAdmin: true,
     });
 
+    // Log Activity
+    await db.insert(activityLog).values({
+        userId: session.user.id,
+        action: "create_team",
+        entityType: "team",
+        entityId: newTeam.id,
+        details: JSON.stringify({ name: newTeam.name, isPrivate: newTeam.isPrivate }),
+    });
+
     revalidatePath("/teams");
     return newTeam;
 }
@@ -58,7 +67,7 @@ export async function createTeam(data: { name: string; parentTeamId?: string | n
 export async function getTeams() {
     const session = await getSession();
     const userId = session?.user?.id;
-    if (!userId) return [];
+    if (!userId) return { publicTeams: [], myPrivateTeams: [] };
 
     // Fetch Public Teams AND My Private Teams
     // Using simple logic: isPrivate = false OR (isPrivate = true AND createdBy = me | member = me)
@@ -93,7 +102,7 @@ export async function getTeams() {
     };
 }
 
-export async function addTeamMember(teamId: string, email: string, isAdmin: boolean = false) {
+export async function addTeamMembers(teamId: string, userIds: string[], isAdmin: boolean = false) {
     const session = await getSession();
     if (!session?.user) throw new Error("Unauthorized");
 
@@ -101,15 +110,33 @@ export async function addTeamMember(teamId: string, email: string, isAdmin: bool
     const canManage = await canManageTeam(teamId, session.user.id);
     if (!canManage) throw new Error("Insufficient permissions");
 
-    // Find user by email
-    const [targetUser] = await db.select().from(users).where(eq(users.email, email));
-    if (!targetUser) throw new Error("User not found");
+    // Filter valid users
+    const targetUsers = await db.select().from(users).where(inArray(users.id, userIds));
+    const validUserIds = targetUsers.map(u => u.id);
 
-    await db.insert(teamMembers).values({
-        teamId,
-        userId: targetUser.id,
-        isAdmin,
-    }).onConflictDoNothing(); // Or update role? Let's just ignore duplicate adds.
+    if (validUserIds.length === 0) return;
+
+    await db.insert(teamMembers).values(
+        validUserIds.map(uid => ({
+            teamId,
+            userId: uid,
+            isAdmin,
+        }))
+    ).onConflictDoNothing();
+
+    // Log Activity for each? Or one batch log? 
+    // Let's log one batch entry or multiple. For simpler activity log, maybe one entry per user or "Added X members".
+    // Existing activity log logic was in separate calls potentially?
+    // Actually, let's insert activity logs for each added member for granularity.
+    await db.insert(activityLog).values(
+        validUserIds.map(uid => ({
+            userId: session.user.id,
+            action: "add_team_member" as const,
+            entityType: "team" as const,
+            entityId: teamId,
+            details: JSON.stringify({ memberId: uid, isAdmin }),
+        }))
+    );
 
     revalidatePath("/teams");
 }

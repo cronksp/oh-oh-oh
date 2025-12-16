@@ -8,11 +8,18 @@ import { Edit2, Trash2, Lock, Users } from "lucide-react";
 import { Event } from "@/lib/db/schema";
 import { deleteEvent } from "@/features/calendar/actions";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { RsvpActions } from "./rsvp-actions";
 
 import { EventPermissionsDialog } from "./event-permissions-dialog";
 
+interface PopoverEvent extends Event {
+    attendees?: { userId: string; name: string; email: string; status: string }[];
+}
+
 interface EventDetailPopoverProps {
-    event: Event;
+    event: PopoverEvent;
     children: React.ReactNode;
     onEdit?: () => void;
     canEdit?: boolean;
@@ -89,6 +96,40 @@ export function EventDetailPopover({ event, children, onEdit, canEdit = false, c
                             <span>{format(new Date(event.endTime), "PPP p")}</span>
                         </div>
                     </div>
+
+                    {/* Attendees Section */}
+                    {event.attendees && event.attendees.length > 0 && (
+                        <div className="pt-2 border-t">
+                            <h5 className="font-semibold text-xs mb-2">Attendees</h5>
+                            <div className="space-y-1 max-h-[150px] overflow-y-auto">
+                                {event.attendees.map((attendee: any) => (
+                                    <div key={attendee.userId} className="flex items-center justify-between text-xs">
+                                        <span className="truncate max-w-[150px]" title={attendee.email}>
+                                            {attendee.name}
+                                        </span>
+                                        <Badge variant="outline" className={cn("text-[10px] px-1 py-0 h-auto", {
+                                            "bg-green-100 text-green-800 border-green-200": attendee.status === "accepted",
+                                            "bg-red-100 text-red-800 border-red-200": attendee.status === "declined",
+                                            "bg-yellow-100 text-yellow-800 border-yellow-200": attendee.status === "tentative",
+                                            "bg-slate-100 text-slate-800 border-slate-200": attendee.status === "pending",
+                                        })}>
+                                            {attendee.status}
+                                        </Badge>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* RSVP Actions (If current user is an attendee) */}
+                    {/* Note: We need to know if the current user is an attendee. 
+                        Ideally passed in or derived. For now assuming we can't easily check 'me' here without session.
+                        Wait, we don't have session here. We can assume if the user is in the attendees list, we show it?
+                        But we don't know who 'me' is client side easily without a context/prop.
+                        Let's rely on a 'currentUser' prop or similar, or just show it if we find a matching attendee?
+                        Actually, the best way: Create a dedicated Client Component for RSVP actions that fetches 'me' or uses a passed 'currentUserId'.
+                    */}
+                    <RsvpActions eventId={event.id} attendees={event.attendees} />
 
                     {(canEdit || canDelete) && (
                         <div className="flex flex-col gap-2 pt-2 border-t">

@@ -55,7 +55,7 @@ export function TeamsSidebar({ publicTeams, privateTeams, selectedId, onSelect }
                 {/* Private Groups */}
                 <div>
                     <div className="flex items-center justify-between px-2 mb-2">
-                        <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider">My Groups</h3>
+                        <h3 className="text-xs font-medium text-slate-500 uppercase tracking-wider">My Teams</h3>
                         <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setCreateType("private")}>
                             <Plus className="h-3 w-3" />
                         </Button>
@@ -77,7 +77,7 @@ export function TeamsSidebar({ publicTeams, privateTeams, selectedId, onSelect }
                             </button>
                         ))}
                         {privateTeams.length === 0 && (
-                            <div className="px-2 text-xs text-slate-400 italic">No private groups</div>
+                            <div className="px-2 text-xs text-slate-400 italic">No private teams</div>
                         )}
                     </div>
                 </div>

@@ -1,10 +1,10 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { events, users, eventGroupings, groupings, groupAdmins, eventPermissions, eventTypes, eventAttendees, teams, teamMembers } from "@/lib/db/schema";
+import { events, users, eventGroupings, groupings, groupAdmins, eventPermissions, eventTypes, eventAttendees, teams, teamMembers, eventTeams, activityLog } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth/session";
 import { decryptUserKey, encryptData, decryptData } from "@/lib/crypto";
-import { eq, and, gte, lte, getTableColumns, isNull, or, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, getTableColumns, isNull, or, inArray, desc, like, SQL } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 interface CreateEventData {
@@ -155,18 +155,28 @@ export async function createEvent(data: CreateEventData) {
                 }))
             );
         }
+
+        // 3. Store Explicit Team Invites
+        if (teamIds && teamIds.length > 0) {
+            await db.insert(eventTeams).values(
+                teamIds.map(tid => ({
+                    eventId: newEvent.id,
+                    teamId: tid
+                }))
+            );
+        }
     }
 
     revalidatePath("/calendar");
     return { success: true, event: newEvent };
 }
 
-export async function getEvents(start: Date, end: Date, options?: { myStuffOnly?: boolean; groupingIds?: string[]; filterUserId?: string }) {
+export async function getEvents(start: Date, end: Date, options?: { myStuffOnly?: boolean; groupingIds?: string[]; filterUserId?: string; searchTerm?: string }) {
     const session = await getSession();
     const userId = session?.user?.id;
 
     // Build base query
-    const conditions = [
+    const conditions: SQL[] = [
         gte(events.startTime, start),
         lte(events.endTime, end)
     ];
@@ -181,6 +191,17 @@ export async function getEvents(start: Date, end: Date, options?: { myStuffOnly?
         conditions.push(eq(events.userId, options.filterUserId));
     }
 
+    // Search term
+    if (options?.searchTerm) {
+        // ILIKE for case-insensitive search
+        conditions.push(
+            or(
+                like(events.title, `%${options.searchTerm}%`),
+                like(events.description, `%${options.searchTerm}%`)
+            )
+        );
+    }
+
     const fetchedEvents = await db.select({
         ...getTableColumns(events),
         ownerName: users.name,
@@ -188,7 +209,7 @@ export async function getEvents(start: Date, end: Date, options?: { myStuffOnly?
     }).from(events)
         .leftJoin(users, eq(events.userId, users.id))
         .leftJoin(eventTypes, eq(events.eventTypeId, eventTypes.id))
-        .where(and(...conditions));
+        .where(and(...conditions)!);
 
     // Filter by groupings if specified
     let filteredEvents = fetchedEvents;
@@ -213,25 +234,38 @@ export async function getEvents(start: Date, end: Date, options?: { myStuffOnly?
         const groupingsForEvent = await db.select().from(eventGroupings).where(eq(eventGroupings.eventId, event.id));
         processedEvent.groupingIds = groupingsForEvent.map(g => g.groupingId);
 
+        // Fetch Invited Teams (for Edit form)
+        const invitedTeams = await db.select().from(eventTeams).where(eq(eventTeams.eventId, event.id));
+        processedEvent.teamIds = invitedTeams.map(t => t.teamId);
+
         // Fetch Attendees (If user is owner or attendee)
         // Public/Shared events: Attendees list visible to owner and attendees.
         // Private events: Attendees logic disabled for now per plan, but code should be safe.
         // We know userId (current user).
-        const attendees = await db.select({
-            userId: eventAttendees.userId,
-            status: eventAttendees.status,
-            name: users.name,
-            email: users.email,
-        })
-            .from(eventAttendees)
-            .innerJoin(users, eq(eventAttendees.userId, users.id))
-            .where(eq(eventAttendees.eventId, event.id));
 
-        const isAttendee = attendees.some(a => a.userId === userId);
+        // Determine permissions
+        // We need to know if current user is an attendee.
+        // We already fetched attendees into processedEvent.attendees if public/shared.
+        // If private, attendees list is empty/hidden, so isAttendee is false (unless we want to support hidden attendees later).
+
+        // Determine permissions
+        let isAttendee = false;
+        if (userId) {
+            if (processedEvent.attendees) {
+                isAttendee = processedEvent.attendees.some((a: any) => a.userId === userId);
+            } else if (!event.isPrivate) {
+                const membership = await db.select().from(eventAttendees).where(and(
+                    eq(eventAttendees.eventId, event.id),
+                    eq(eventAttendees.userId, userId)
+                ));
+                isAttendee = membership.length > 0;
+            }
+        }
+
         const isOwner = event.userId === userId;
 
         if (isOwner || isAttendee) {
-            processedEvent.attendees = attendees;
+            // processedEvent.attendees is already set for public/shared if we fetched it above
         }
 
         if (event.isPrivate && event.userId === userId && event.encryptedData) {
@@ -487,6 +521,22 @@ export async function updateEvent(eventId: string, data: Partial<CreateEventData
                 }))
             );
         }
+
+        // Sync Explicit Teams
+        if (data.teamIds) { // Only sync if provided (even empty array)
+            // Delete existing
+            await db.delete(eventTeams).where(eq(eventTeams.eventId, eventId));
+
+            // Insert new
+            if (data.teamIds.length > 0) {
+                await db.insert(eventTeams).values(
+                    data.teamIds.map(tid => ({
+                        eventId: eventId,
+                        teamId: tid
+                    }))
+                );
+            }
+        }
     }
 
     revalidatePath("/calendar");
@@ -496,10 +546,24 @@ export async function deleteEvent(eventId: string) {
     const session = await getSession();
     if (!session?.user) throw new Error("Unauthorized");
 
+    // Fetch event first to get its details for logging and permission checks
+    const [event] = await db.select().from(events).where(eq(events.id, eventId));
+    if (!event) throw new Error("Event not found");
+
     const canDelete = await canUserDeleteEvent(eventId, session.user.id);
     if (!canDelete) throw new Error("No permission to delete this event");
 
     await db.delete(events).where(eq(events.id, eventId));
+
+    // Log Activity
+    await db.insert(activityLog).values({
+        userId: session.user.id,
+        action: "delete_event",
+        entityType: "event",
+        entityId: eventId,
+        details: JSON.stringify({ title: event.title }),
+    });
+
     revalidatePath("/calendar");
 }
 
@@ -740,4 +804,32 @@ export async function createEventType(data: { name: string; color: string; isPri
     }
 
     revalidatePath("/calendar");
+}
+
+// Activity Log
+export async function getActivityLog(filter: "all" | "public" = "all") {
+    const session = await getSession();
+    if (!session?.user) return [];
+
+    let query = db.select({
+        id: activityLog.id,
+        action: activityLog.action,
+        entityType: activityLog.entityType,
+        details: activityLog.details,
+        createdAt: activityLog.createdAt,
+        userName: users.name,
+        userEmail: users.email,
+        title: events.title
+    })
+        .from(activityLog)
+        .leftJoin(users, eq(activityLog.userId, users.id))
+        .leftJoin(events, and(eq(activityLog.entityType, "event"), eq(activityLog.entityId, events.id)))
+        .orderBy(desc(activityLog.createdAt))
+        .limit(50);
+
+    if (filter === "public") {
+        query.where(eq(events.isPrivate, false));
+    }
+
+    return await query;
 }

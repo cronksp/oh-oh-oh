@@ -59,6 +59,8 @@ export function MonthView({ currentDate, events, userId, groupings, eventTypes }
         );
     }
 
+    const weeks = days.length / 7;
+
     return (
         <>
             <div className="flex flex-col h-full border rounded-lg overflow-hidden bg-white dark:bg-slate-950 shadow-sm">
@@ -72,7 +74,10 @@ export function MonthView({ currentDate, events, userId, groupings, eventTypes }
                 </div>
 
                 {/* Days Grid */}
-                <div className="grid grid-cols-7 grid-rows-6 flex-1">
+                <div
+                    className="grid grid-cols-7 flex-1"
+                    style={{ gridTemplateRows: `repeat(${weeks}, minmax(0, 1fr))` }}
+                >
                     {days.map((day) => {
                         const dayEvents = getEventsForDay(day);
                         const isCurrentMonth = isSameMonth(day, currentDate);

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Team } from "@/lib/db/schema";
 import { Button } from "@/components/ui/button";
 import { Plus, MoreHorizontal, UserMinus, Shield, ShieldAlert, Loader2 } from "lucide-react";
-import { getTeamMembers, removeTeamMember, updateMemberRole, addTeamMember } from "@/features/teams/actions";
+import { getTeamMembers, removeTeamMember, updateMemberRole } from "@/features/teams/actions";
 import { toast } from "sonner";
 import {
     DropdownMenu,

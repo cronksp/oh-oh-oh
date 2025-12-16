@@ -1,17 +1,17 @@
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
 
-import { db } from "../src/lib/db";
-import { users } from "../src/lib/db/schema";
-
-async function listUsers() {
+async function main() {
     console.log("Fetching users...");
-    try {
-        const allUsers = await db.select().from(users);
-        console.log("Found " + allUsers.length + " users:");
-        console.log(JSON.stringify(allUsers, null, 2));
-    } catch (error) {
-        console.error("Error fetching users:", error);
-    }
+    const allUsers = await db.select().from(users);
+    console.log("Users found:");
+    allUsers.forEach(u => {
+        console.log(`- ${u.name} (${u.email}) [${u.role}]`);
+    });
     process.exit(0);
 }
 
-listUsers().catch(console.error);
+main().catch(err => {
+    console.error(err);
+    process.exit(1);
+});

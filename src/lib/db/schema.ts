@@ -154,6 +154,13 @@ export const eventAttendees = pgTable("event_attendees", {
     pk: { columns: [t.eventId, t.userId] },
 }));
 
+export const eventTeams = pgTable("event_teams", {
+    eventId: uuid("event_id").references(() => events.id, { onDelete: "cascade" }).notNull(),
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }).notNull(),
+}, (t) => ({
+    pk: { columns: [t.eventId, t.teamId] },
+}));
+
 export type EventType = typeof eventTypes.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -167,4 +174,5 @@ export type ActivityLog = typeof activityLog.$inferSelect;
 export type Team = typeof teams.$inferSelect;
 export type TeamMember = typeof teamMembers.$inferSelect;
 export type EventAttendee = typeof eventAttendees.$inferSelect;
+export type EventTeam = typeof eventTeams.$inferSelect;
 
