@@ -1,10 +1,10 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { events, users, eventGroupings, groupings, groupAdmins, eventPermissions, eventTypes } from "@/lib/db/schema";
+import { events, users, eventGroupings, groupings, groupAdmins, eventPermissions, eventTypes, eventAttendees, teams, teamMembers } from "@/lib/db/schema";
 import { getSession } from "@/lib/auth/session";
 import { decryptUserKey, encryptData, decryptData } from "@/lib/crypto";
-import { eq, and, gte, lte, getTableColumns, isNull, or } from "drizzle-orm";
+import { eq, and, gte, lte, getTableColumns, isNull, or, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 interface CreateEventData {
@@ -17,6 +17,8 @@ interface CreateEventData {
     eventTypeId: string;
     // eventType: "vacation" | "sick_leave" | "project_travel" | "personal_travel" | "personal_appointment" | "work_meeting" | "work_gathering";
     groupingIds?: string[];
+    attendeeIds?: string[]; // Direct user invites
+    teamIds?: string[]; // Team invites (recursive)
 }
 
 export async function createEvent(data: CreateEventData) {
@@ -54,6 +56,14 @@ export async function createEvent(data: CreateEventData) {
     const [et] = await db.select().from(eventTypes).where(eq(eventTypes.id, data.eventTypeId));
     if (!et) throw new Error("Invalid event type");
 
+    // Verify if the key is a valid enum value, otherwise fallback to "personal_appointment"
+    // This allows custom/private types to exist without breaking the strict Postgres Enum constraint
+    const validEnumValues = [
+        "vacation", "sick_leave", "project_travel", "personal_travel",
+        "personal_appointment", "work_meeting", "work_gathering"
+    ];
+    const legacyEventType = validEnumValues.includes(et.key) ? et.key : "personal_appointment";
+
     const [newEvent] = await db.insert(events).values({
         userId: session.user.id,
         title: finalTitle,
@@ -62,7 +72,7 @@ export async function createEvent(data: CreateEventData) {
         endTime: new Date(endTime),
         isPrivate,
         isOutOfOffice,
-        eventType: et.key as any, // Backward compatibility
+        eventType: legacyEventType as any,
         eventTypeId: data.eventTypeId,
         encryptedData,
     }).returning();
@@ -74,6 +84,77 @@ export async function createEvent(data: CreateEventData) {
                 groupingId: gid,
             }))
         );
+    }
+
+    // Handle Attendees (Only if NOT private, per plan)
+    if (!isPrivate) {
+        const { attendeeIds, teamIds } = data;
+        const attendeesToInsert = new Map<string, { userId: string, invitedViaTeamId: string | null }>();
+
+        // 1. Direct Attendees
+        if (attendeeIds) {
+            attendeeIds.forEach(uid => {
+                if (uid !== session.user.id) { // Don't add owner as attendee yet? Or maybe owner is auto-accepted? Usually owner is implicit.
+                    attendeesToInsert.set(uid, { userId: uid, invitedViaTeamId: null });
+                }
+            });
+        }
+
+        // 2. Team Attendees (Recursive)
+        if (teamIds && teamIds.length > 0) {
+            // Helper to fetch all subteams recursively
+            // For MVP, lets just fetch all teams and build a tree in memory to find descendants, 
+            // since we don't have a closure table or recursive CTE query ready in simple drizzle yet.
+            // Actually, we can just do a recursive function.
+
+            const allTeams = await db.select().from(teams);
+            const allTeamMembers = await db.select().from(teamMembers);
+
+            const getSubTeamIds = (rootIds: string[]): string[] => {
+                let foundIds = new Set<string>(rootIds);
+                let toSearch = [...rootIds];
+
+                while (toSearch.length > 0) {
+                    const currentId = toSearch.pop();
+                    const children = allTeams.filter(t => t.parentTeamId === currentId).map(t => t.id);
+                    children.forEach(childId => {
+                        if (!foundIds.has(childId)) {
+                            foundIds.add(childId);
+                            toSearch.push(childId);
+                        }
+                    });
+                }
+                return Array.from(foundIds);
+            };
+
+            const expandedTeamIds = getSubTeamIds(teamIds);
+
+            // Now find members of all these teams
+            // We want to track WHICH team invited them. 
+            // Deduplication rule: "A user in multiple teams gets only ONE invite."
+            // "prioritizing the most specific sub-team if multiple?" -> Hard to define "specific" without depth. 
+            // Let's just pick the first one we find for now.
+
+            for (const tid of expandedTeamIds) {
+                const members = allTeamMembers.filter(tm => tm.teamId === tid);
+                for (const member of members) {
+                    if (member.userId !== session.user.id && !attendeesToInsert.has(member.userId)) {
+                        attendeesToInsert.set(member.userId, { userId: member.userId, invitedViaTeamId: tid });
+                    }
+                }
+            }
+        }
+
+        if (attendeesToInsert.size > 0) {
+            await db.insert(eventAttendees).values(
+                Array.from(attendeesToInsert.values()).map(a => ({
+                    eventId: newEvent.id,
+                    userId: a.userId,
+                    invitedViaTeamId: a.invitedViaTeamId,
+                    status: 'pending' as const // Explicitly cast to literal type
+                }))
+            );
+        }
     }
 
     revalidatePath("/calendar");
@@ -103,6 +184,7 @@ export async function getEvents(start: Date, end: Date, options?: { myStuffOnly?
     const fetchedEvents = await db.select({
         ...getTableColumns(events),
         ownerName: users.name,
+        eventTypeName: eventTypes.name, // Fetch the real name
     }).from(events)
         .leftJoin(users, eq(events.userId, users.id))
         .leftJoin(eventTypes, eq(events.eventTypeId, eventTypes.id))
@@ -125,11 +207,32 @@ export async function getEvents(start: Date, end: Date, options?: { myStuffOnly?
 
     // Decrypt private events for the owner
     const processedEvents = await Promise.all(filteredEvents.map(async (event) => {
-        let processedEvent = { ...event, groupingIds: [] as string[] }; // Initialize groupingIds
+        let processedEvent: any = { ...event, groupingIds: [] as string[], attendees: [] }; // Initialize groupingIds
 
         // Fetch groupings for this event
         const groupingsForEvent = await db.select().from(eventGroupings).where(eq(eventGroupings.eventId, event.id));
         processedEvent.groupingIds = groupingsForEvent.map(g => g.groupingId);
+
+        // Fetch Attendees (If user is owner or attendee)
+        // Public/Shared events: Attendees list visible to owner and attendees.
+        // Private events: Attendees logic disabled for now per plan, but code should be safe.
+        // We know userId (current user).
+        const attendees = await db.select({
+            userId: eventAttendees.userId,
+            status: eventAttendees.status,
+            name: users.name,
+            email: users.email,
+        })
+            .from(eventAttendees)
+            .innerJoin(users, eq(eventAttendees.userId, users.id))
+            .where(eq(eventAttendees.eventId, event.id));
+
+        const isAttendee = attendees.some(a => a.userId === userId);
+        const isOwner = event.userId === userId;
+
+        if (isOwner || isAttendee) {
+            processedEvent.attendees = attendees;
+        }
 
         if (event.isPrivate && event.userId === userId && event.encryptedData) {
             try {
@@ -142,7 +245,8 @@ export async function getEvents(start: Date, end: Date, options?: { myStuffOnly?
                     const userKey = decryptUserKey(user.encryptedPrivateKey);
                     const decryptedJson = decryptData(event.encryptedData, userKey);
                     const { title, description } = JSON.parse(decryptedJson) as { title: string; description: string };
-                    return { ...processedEvent, title, description };
+                    processedEvent.title = title;
+                    processedEvent.description = description;
                 }
             } catch (e) {
                 console.error("Failed to decrypt event", event.id, e);
@@ -152,6 +256,20 @@ export async function getEvents(start: Date, end: Date, options?: { myStuffOnly?
     }));
 
     return processedEvents;
+}
+
+export async function rsvpEvent(eventId: string, status: "accepted" | "declined" | "tentative") {
+    const session = await getSession();
+    if (!session?.user) throw new Error("Unauthorized");
+
+    await db.update(eventAttendees)
+        .set({ status, updatedAt: new Date() })
+        .where(and(
+            eq(eventAttendees.eventId, eventId),
+            eq(eventAttendees.userId, session.user.id)
+        ));
+
+    revalidatePath("/calendar");
 }
 
 export async function getEventsWithPermissions(start: Date, end: Date, options?: { myStuffOnly?: boolean; groupingIds?: string[]; filterUserId?: string }) {
@@ -265,8 +383,16 @@ export async function updateEvent(eventId: string, data: Partial<CreateEventData
     if (data.eventTypeId) {
         const [et] = await db.select().from(eventTypes).where(eq(eventTypes.id, data.eventTypeId));
         if (!et) throw new Error("Invalid event type");
+
+        // Verify if the key is a valid enum value, otherwise fallback to "personal_appointment"
+        const validEnumValues = [
+            "vacation", "sick_leave", "project_travel", "personal_travel",
+            "personal_appointment", "work_meeting", "work_gathering"
+        ];
+        const legacyEventType = validEnumValues.includes(et.key) ? et.key : "personal_appointment";
+
         updateData.eventTypeId = data.eventTypeId;
-        updateData.eventType = et.key;
+        updateData.eventType = legacyEventType;
     }
 
     await db.update(events).set(updateData).where(eq(events.id, eventId));
@@ -282,6 +408,82 @@ export async function updateEvent(eventId: string, data: Partial<CreateEventData
                 data.groupingIds.map(gid => ({
                     eventId: eventId,
                     groupingId: gid,
+                }))
+            );
+        }
+    }
+
+    // Handle Attendees Sync (Only if NOT private)
+    if (!event.isPrivate && (data.attendeeIds || data.teamIds)) {
+        const attendeeIds = data.attendeeIds || [];
+        const teamIds = data.teamIds || [];
+
+        const targetAttendees = new Map<string, { userId: string, invitedViaTeamId: string | null }>();
+
+        // 1. Direct
+        attendeeIds.forEach(uid => {
+            if (uid !== session.user.id) {
+                targetAttendees.set(uid, { userId: uid, invitedViaTeamId: null });
+            }
+        });
+
+        // 2. Recursive Teams
+        if (teamIds.length > 0) {
+            const allTeams = await db.select().from(teams);
+            const allTeamMembers = await db.select().from(teamMembers);
+
+            const getSubTeamIds = (rootIds: string[]): string[] => {
+                let foundIds = new Set<string>(rootIds);
+                let toSearch = [...rootIds];
+                while (toSearch.length > 0) {
+                    const currentId = toSearch.pop();
+                    const children = allTeams.filter(t => t.parentTeamId === currentId).map(t => t.id);
+                    children.forEach(childId => {
+                        if (!foundIds.has(childId)) {
+                            foundIds.add(childId);
+                            toSearch.push(childId);
+                        }
+                    });
+                }
+                return Array.from(foundIds);
+            };
+
+            const expandedTeamIds = getSubTeamIds(teamIds);
+            for (const tid of expandedTeamIds) {
+                const members = allTeamMembers.filter(tm => tm.teamId === tid);
+                for (const member of members) {
+                    if (member.userId !== session.user.id && !targetAttendees.has(member.userId)) {
+                        targetAttendees.set(member.userId, { userId: member.userId, invitedViaTeamId: tid });
+                    }
+                }
+            }
+        }
+
+        // Fetch existing
+        const existingAttendees = await db.select().from(eventAttendees).where(eq(eventAttendees.eventId, eventId));
+        const existingUserIds = new Set(existingAttendees.map(a => a.userId));
+
+        // Delete removed
+        const toDeleteIds = existingAttendees
+            .filter(a => !targetAttendees.has(a.userId))
+            .map(a => a.userId);
+
+        if (toDeleteIds.length > 0) {
+            await db.delete(eventAttendees).where(and(
+                eq(eventAttendees.eventId, eventId),
+                inArray(eventAttendees.userId, toDeleteIds)
+            ));
+        }
+
+        // Add new
+        const toAdd = Array.from(targetAttendees.values()).filter(a => !existingUserIds.has(a.userId));
+        if (toAdd.length > 0) {
+            await db.insert(eventAttendees).values(
+                toAdd.map(a => ({
+                    eventId: eventId,
+                    userId: a.userId,
+                    invitedViaTeamId: a.invitedViaTeamId,
+                    status: 'pending' as const
                 }))
             );
         }

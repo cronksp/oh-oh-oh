@@ -109,7 +109,8 @@ export function GroupingManagementDialog({ groupings, eventTypes = [] }: Groupin
 
 function GroupingsTab({ groupings }: { groupings: Grouping[] }) {
     const form = useForm<GroupingFormValues>({
-        resolver: zodResolver(groupingSchema),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        resolver: zodResolver(groupingSchema) as any,
         defaultValues: {
             name: "",
             color: "#3b82f6",
@@ -228,7 +229,8 @@ function GroupingsTab({ groupings }: { groupings: Grouping[] }) {
 
 function EventTypesTab({ eventTypes }: { eventTypes: EventType[] }) {
     const form = useForm<EventTypeFormValues>({
-        resolver: zodResolver(eventTypeSchema),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        resolver: zodResolver(eventTypeSchema) as any,
         defaultValues: {
             name: "",
             color: "#eab308",

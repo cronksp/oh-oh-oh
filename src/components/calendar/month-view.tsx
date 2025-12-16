@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, format, isSameMonth, isSameDay } from "date-fns";
+import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Event, EventType } from "@/lib/db/schema";
 import { EventDetailPopover } from "./event-detail-popover";
@@ -17,6 +18,7 @@ type EventWithPermissions = Event & {
         isOwner: boolean;
     };
     groupingIds?: string[];
+    eventTypeName?: string | null;
 };
 
 interface MonthViewProps {
@@ -34,6 +36,15 @@ export function MonthView({ currentDate, events, userId, groupings, eventTypes }
     const endDate = endOfWeek(monthEnd);
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
     const [creatingEventForDate, setCreatingEventForDate] = useState<Date | null>(null);
+    const [now, setNow] = useState<Date | null>(null);
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setNow(new Date());
+        setIsMounted(true);
+    }, []);
+
+    if (!isMounted) return null;
 
     const days = eachDayOfInterval({
         start: startDate,
@@ -65,7 +76,7 @@ export function MonthView({ currentDate, events, userId, groupings, eventTypes }
                     {days.map((day) => {
                         const dayEvents = getEventsForDay(day);
                         const isCurrentMonth = isSameMonth(day, currentDate);
-                        const isToday = isSameDay(day, new Date());
+                        const isToday = now ? isSameDay(day, now) : false;
 
                         return (
                             <div
@@ -95,18 +106,20 @@ export function MonthView({ currentDate, events, userId, groupings, eventTypes }
                                                 canDelete={canDelete}
                                                 isOwner={isOwner}
                                                 ownerName={event.ownerName}
+                                                eventTypeName={event.eventTypeName}
                                                 onEdit={() => setEditingEvent(event)}
                                             >
-                                                <div
-                                                    className="text-xs px-1 py-0.5 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 truncate cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-800"
+                                                <button
+                                                    className="flex w-full text-left items-center gap-1 text-xs px-1 py-0.5 rounded bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800"
                                                     onClick={(e) => e.stopPropagation()}
                                                     onDoubleClick={(e) => {
                                                         e.stopPropagation();
                                                         if (canEdit) setEditingEvent(event);
                                                     }}
                                                 >
-                                                    {event.title}
-                                                </div>
+                                                    <span className="truncate font-medium">{event.title}</span>
+                                                    {event.isPrivate && <Lock className="h-3 w-3 flex-shrink-0 opacity-70" />}
+                                                </button>
                                             </EventDetailPopover>
                                         );
                                     })}

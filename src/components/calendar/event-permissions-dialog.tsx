@@ -90,7 +90,8 @@ export function EventPermissionsDialog({ event, trigger }: EventPermissionsDialo
     // Handle search
     useEffect(() => {
         async function search() {
-            if (debouncedSearch.length < 2) {
+            // Allow "*" for browse or >= 2 chars for search
+            if (debouncedSearch !== "*" && debouncedSearch.length < 2) {
                 setSearchResults([]);
                 return;
             }
@@ -151,18 +152,27 @@ export function EventPermissionsDialog({ event, trigger }: EventPermissionsDialo
                     {/* Search Section */}
                     <div className="space-y-2">
                         <Label>Add People</Label>
-                        <div className="relative">
-                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Search by name or email..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-8"
-                            />
+                        <div className="flex gap-2">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search by name or email..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-8"
+                                />
+                            </div>
+                            <Button
+                                variant="outline"
+                                onClick={() => setSearchQuery("*")}
+                                title="Browse all users"
+                            >
+                                Browse
+                            </Button>
                         </div>
-                        {searchResults.length > 0 && (
+                        {searchResults.filter(u => u.id !== event.userId).length > 0 && (
                             <div className="border rounded-md mt-2 max-h-[200px] overflow-y-auto bg-slate-50 dark:bg-slate-900">
-                                {searchResults.map((user) => {
+                                {searchResults.filter(u => u.id !== event.userId).map((user) => {
                                     const existing = existingPermissions.find(p => p.userId === user.id);
                                     return (
                                         <div key={user.id} className="flex items-center justify-between p-2 hover:bg-slate-100 dark:hover:bg-slate-800">

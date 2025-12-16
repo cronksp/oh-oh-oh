@@ -6,6 +6,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface WhosOutSummaryProps {
@@ -40,7 +41,10 @@ export function WhosOutSummary({ events }: WhosOutSummaryProps) {
                         {outEvents.map((event) => (
                             <div key={event.id} className="text-sm flex flex-col">
                                 <span className="font-medium">{event.ownerName || "Unknown"}</span>
-                                <span className="text-xs text-muted-foreground truncate">{event.title}</span>
+                                <span className="text-xs text-muted-foreground truncate flex items-center gap-1">
+                                    {event.isPrivate && <Lock className="h-3 w-3 flex-shrink-0" />}
+                                    {event.title}
+                                </span>
                             </div>
                         ))}
                     </div>

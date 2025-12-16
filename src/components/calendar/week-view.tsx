@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { startOfWeek, endOfWeek, eachDayOfInterval, format, isSameDay, differenceInMinutes } from "date-fns";
+import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Event, EventType } from "@/lib/db/schema";
 import { EventDetailPopover } from "./event-detail-popover";
@@ -27,6 +28,13 @@ export function WeekView({ currentDate, events, userId, eventTypes }: WeekViewPr
     const startDate = startOfWeek(currentDate);
     const endDate = endOfWeek(currentDate);
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    if (!isMounted) return null;
 
     const days = eachDayOfInterval({
         start: startDate,
@@ -103,9 +111,9 @@ export function WeekView({ currentDate, events, userId, eventTypes }: WeekViewPr
                                                 ownerName={event.ownerName}
                                                 onEdit={() => setEditingEvent(event)}
                                             >
-                                                <div
+                                                <button
                                                     className={cn(
-                                                        "absolute left-0.5 right-0.5 rounded px-1 py-0.5 text-xs overflow-hidden cursor-pointer border",
+                                                        "absolute text-left left-0.5 right-0.5 rounded px-1 py-0.5 text-xs overflow-hidden border",
                                                         event.isPrivate
                                                             ? "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700"
                                                             : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800"
@@ -121,14 +129,14 @@ export function WeekView({ currentDate, events, userId, eventTypes }: WeekViewPr
                                                         if (canEdit) setEditingEvent(event);
                                                     }}
                                                 >
-                                                    <div className="font-semibold truncate">
-                                                        {event.isPrivate && <span className="mr-1">🔒</span>}
-                                                        {event.title}
+                                                    <div className="font-semibold truncate flex items-center">
+                                                        {event.isPrivate && <Lock className="h-3 w-3 mr-1 flex-shrink-0" />}
+                                                        <span className="truncate">{event.title}</span>
                                                     </div>
                                                     <div className="truncate opacity-80">
                                                         {format(start, "h:mm a")} - {format(end, "h:mm a")}
                                                     </div>
-                                                </div>
+                                                </button>
                                             </EventDetailPopover>
                                         );
                                     })}

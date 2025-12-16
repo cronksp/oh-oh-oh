@@ -6,6 +6,7 @@ import * as z from "zod";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format, isValid } from "date-fns";
 import { EventType } from "@/lib/db/schema";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +24,10 @@ import {
     SelectItem,
     SelectTrigger,
     SelectValue,
+    SelectGroup,
+    SelectLabel,
 } from "@/components/ui/select";
+import { Lock } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -299,17 +303,39 @@ export function EventForm({ defaultValues, onSubmit, groupings, eventTypes, subm
                                     </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                    {eventTypes.map((type) => (
-                                        <SelectItem key={type.id} value={type.id}>
-                                            <div className="flex items-center gap-2">
-                                                <div
-                                                    className="w-3 h-3 rounded-full"
-                                                    style={{ backgroundColor: type.color || "#ccc" }}
-                                                />
-                                                {type.name}
-                                            </div>
-                                        </SelectItem>
-                                    ))}
+                                    {eventTypes.filter(t => !t.userId).length > 0 && (
+                                        <SelectGroup>
+                                            <SelectLabel>Standard Types</SelectLabel>
+                                            {eventTypes.filter(t => !t.userId).map((type) => (
+                                                <SelectItem key={type.id} value={type.id}>
+                                                    <div className="flex items-center gap-2">
+                                                        <div
+                                                            className="w-3 h-3 rounded-full"
+                                                            style={{ backgroundColor: type.color || "#ccc" }}
+                                                        />
+                                                        {type.name}
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectGroup>
+                                    )}
+                                    {eventTypes.filter(t => t.userId).length > 0 && (
+                                        <SelectGroup>
+                                            <SelectLabel>Private Types</SelectLabel>
+                                            {eventTypes.filter(t => t.userId).map((type) => (
+                                                <SelectItem key={type.id} value={type.id}>
+                                                    <div className="flex items-center gap-2">
+                                                        <div
+                                                            className="w-3 h-3 rounded-full"
+                                                            style={{ backgroundColor: type.color || "#ccc" }}
+                                                        />
+                                                        {type.name}
+                                                        <Lock className="h-3 w-3 text-muted-foreground ml-1" />
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectGroup>
+                                    )}
                                 </SelectContent>
                             </Select>
                             <FormMessage />
@@ -320,7 +346,10 @@ export function EventForm({ defaultValues, onSubmit, groupings, eventTypes, subm
                     control={form.control}
                     name="isOutOfOffice"
                     render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors" onClick={() => field.onChange(!field.value)}>
+                        <FormItem
+                            className="flex flex-row items-center justify-between rounded-lg border p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
+                            onClick={() => field.onChange(!field.value)}
+                        >
                             <div className="space-y-0.5">
                                 <FormLabel className="text-base cursor-pointer">Out of Office</FormLabel>
                                 <DialogDescription>
@@ -328,12 +357,12 @@ export function EventForm({ defaultValues, onSubmit, groupings, eventTypes, subm
                                 </DialogDescription>
                             </div>
                             <FormControl>
-                                <input
-                                    type="checkbox"
-                                    checked={field.value}
-                                    onChange={field.onChange}
-                                    className="h-4 w-4 rounded border-gray-300 text-slate-600 focus:ring-slate-500 pointer-events-none"
-                                />
+                                <div onClick={(e) => e.stopPropagation()}>
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </div>
                             </FormControl>
                         </FormItem>
                     )}
@@ -342,7 +371,10 @@ export function EventForm({ defaultValues, onSubmit, groupings, eventTypes, subm
                     control={form.control}
                     name="isPrivate"
                     render={({ field }) => (
-                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors" onClick={() => field.onChange(!field.value)}>
+                        <FormItem
+                            className="flex flex-row items-center justify-between rounded-lg border p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
+                            onClick={() => field.onChange(!field.value)}
+                        >
                             <div className="space-y-0.5">
                                 <FormLabel className="text-base cursor-pointer">Private Event</FormLabel>
                                 <DialogDescription>
@@ -350,12 +382,12 @@ export function EventForm({ defaultValues, onSubmit, groupings, eventTypes, subm
                                 </DialogDescription>
                             </div>
                             <FormControl>
-                                <input
-                                    type="checkbox"
-                                    checked={field.value}
-                                    onChange={field.onChange}
-                                    className="h-4 w-4 rounded border-gray-300 text-slate-600 focus:ring-slate-500 pointer-events-none"
-                                />
+                                <div onClick={(e) => e.stopPropagation()}>
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                    />
+                                </div>
                             </FormControl>
                         </FormItem>
                     )}

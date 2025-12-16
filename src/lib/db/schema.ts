@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, boolean, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, boolean, pgEnum, foreignKey } from "drizzle-orm/pg-core";
 
 export const roleEnum = pgEnum("role", ["user", "admin"]);
 export const eventTypeEnum = pgEnum("event_type", [
@@ -116,6 +116,44 @@ export const eventPermissions = pgTable("event_permissions", {
     pk: { columns: [t.eventId, t.userId] },
 }));
 
+export const attendeeStatusEnum = pgEnum("attendee_status", ["pending", "accepted", "declined", "tentative"]);
+
+export const teams = pgTable("teams", {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    parentTeamId: uuid("parent_team_id"),
+    createdBy: uuid("created_by").references(() => users.id).notNull(),
+    isPrivate: boolean("is_private").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+    parentTeamFk: foreignKey({
+        columns: [t.parentTeamId],
+        foreignColumns: [t.id],
+        name: "teams_parent_team_id_fk"
+    }),
+}));
+
+export const teamMembers = pgTable("team_members", {
+    teamId: uuid("team_id").references(() => teams.id, { onDelete: "cascade" }).notNull(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    isAdmin: boolean("is_admin").default(false).notNull(),
+    joinedAt: timestamp("joined_at").defaultNow().notNull(),
+}, (t) => ({
+    pk: { columns: [t.teamId, t.userId] },
+}));
+
+export const eventAttendees = pgTable("event_attendees", {
+    eventId: uuid("event_id").references(() => events.id, { onDelete: "cascade" }).notNull(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
+    status: attendeeStatusEnum("status").default("pending").notNull(),
+    invitedViaTeamId: uuid("invited_via_team_id").references(() => teams.id, { onDelete: "set null" }),
+    invitedAt: timestamp("invited_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (t) => ({
+    pk: { columns: [t.eventId, t.userId] },
+}));
+
 export type EventType = typeof eventTypes.$inferSelect;
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -126,3 +164,7 @@ export type EventPermission = typeof eventPermissions.$inferSelect;
 export type EmailVerificationCode = typeof emailVerificationCodes.$inferSelect;
 export type SystemSetting = typeof systemSettings.$inferSelect;
 export type ActivityLog = typeof activityLog.$inferSelect;
+export type Team = typeof teams.$inferSelect;
+export type TeamMember = typeof teamMembers.$inferSelect;
+export type EventAttendee = typeof eventAttendees.$inferSelect;
+

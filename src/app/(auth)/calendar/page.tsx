@@ -69,12 +69,10 @@ export default async function CalendarPage({ searchParams }: CalendarPageProps) 
                 </div>
             </div>
 
-            <div className="flex-1 min-h-0">
-                <div className="flex-1 min-h-0">
-                    {view === "month" && <MonthView currentDate={currentDate} events={events} userId={session.user.id} groupings={groupings} eventTypes={eventTypes} />}
-                    {view === "week" && <WeekView currentDate={currentDate} events={events} userId={session.user.id} eventTypes={eventTypes} />}
-                    {view === "day" && <DayView currentDate={currentDate} events={events} userId={session.user.id} eventTypes={eventTypes} />}
-                </div>
+            <div className="flex-1 min-h-0 flex flex-col">
+                {view === "month" && <MonthView currentDate={currentDate} events={events} userId={session.user.id} groupings={groupings} eventTypes={eventTypes} />}
+                {view === "week" && <WeekView currentDate={currentDate} events={events} userId={session.user.id} eventTypes={eventTypes} />}
+                {view === "day" && <DayView currentDate={currentDate} events={events} userId={session.user.id} eventTypes={eventTypes} />}
             </div>
         </div>
     );

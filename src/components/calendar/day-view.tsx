@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format, isSameDay, differenceInMinutes } from "date-fns";
+import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Event, EventType } from "@/lib/db/schema";
 import { EventDetailPopover } from "./event-detail-popover";
@@ -25,6 +26,13 @@ interface DayViewProps {
 
 export function DayView({ currentDate, events, userId, eventTypes }: DayViewProps) {
     const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    if (!isMounted) return null;
 
     const hours = Array.from({ length: 24 }, (_, i) => i);
     const dayEvents = events.filter((event) => isSameDay(new Date(event.startTime), currentDate));
@@ -71,10 +79,8 @@ export function DayView({ currentDate, events, userId, eventTypes }: DayViewProp
                                 const durationMinutes = differenceInMinutes(end, start);
                                 const { canEdit, canDelete, isOwner } = event.permissions || {};
 
-                                // Calculate position and height (20px per 15 mins approx, 80px per hour)
-                                // h-20 is 5rem = 80px. So 80px / 60min = 1.333px per minute.
-                                const top = (startMinutes / 60) * 56;
-                                const height = (durationMinutes / 60) * 56;
+                                const top = (startMinutes / 60) * 80; // h-20 is 80px
+                                const height = (durationMinutes / 60) * 80; // h-20 is 80px
 
                                 return (
                                     <EventDetailPopover
@@ -86,9 +92,9 @@ export function DayView({ currentDate, events, userId, eventTypes }: DayViewProp
                                         ownerName={event.ownerName}
                                         onEdit={() => setEditingEvent(event)}
                                     >
-                                        <div
+                                        <button
                                             className={cn(
-                                                "absolute left-2 right-2 rounded p-2 text-sm overflow-hidden cursor-pointer border shadow-sm",
+                                                "absolute text-left left-2 right-2 rounded p-2 text-sm overflow-hidden border shadow-sm",
                                                 event.isPrivate
                                                     ? "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700"
                                                     : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-blue-200 dark:border-blue-800"
@@ -105,9 +111,9 @@ export function DayView({ currentDate, events, userId, eventTypes }: DayViewProp
                                             }}
                                         >
                                             <div className="flex justify-between items-start">
-                                                <div className="font-bold truncate">
-                                                    {event.isPrivate && <span className="mr-2">🔒</span>}
-                                                    {event.title}
+                                                <div className="font-bold truncate flex items-center">
+                                                    {event.isPrivate && <Lock className="h-3 w-3 mr-1 flex-shrink-0" />}
+                                                    <span className="truncate">{event.title}</span>
                                                 </div>
                                                 <div className="text-xs opacity-80 whitespace-nowrap">
                                                     {format(start, "h:mm a")} - {format(end, "h:mm a")}
@@ -118,7 +124,7 @@ export function DayView({ currentDate, events, userId, eventTypes }: DayViewProp
                                                     {event.description}
                                                 </div>
                                             )}
-                                        </div>
+                                        </button>
                                     </EventDetailPopover>
                                 );
                             })}

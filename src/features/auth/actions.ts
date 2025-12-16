@@ -51,7 +51,8 @@ export async function searchUsers(query: string) {
         throw new Error("Unauthorized");
     }
 
-    if (!query || query.length < 2) return [];
+    // Allow browsing with "*" or return empty if too short
+    if (query !== "*" && (!query || query.length < 2)) return [];
 
     // Simple case-insensitive search
     // Note: In a real app with many users, use full-text search or proper indexing
@@ -60,6 +61,10 @@ export async function searchUsers(query: string) {
         name: users.name,
         email: users.email,
     }).from(users);
+
+    if (query === "*") {
+        return allUsers.slice(0, 20);
+    }
 
     const lowerQuery = query.toLowerCase();
     return allUsers.filter(u =>
