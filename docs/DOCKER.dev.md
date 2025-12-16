@@ -31,4 +31,11 @@ Once inside the Dev Container terminal:
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000).
+By default, the container maps the app on host port 3001.
+Open [http://localhost:3001](http://localhost:3001).
+
+To use a different host port, set `HOST_PORT` before starting compose or the Dev Container, for example:
+```bash
+HOST_PORT=4000 docker compose -f docker/docker-compose.yml up -d
+```
+Then browse [http://localhost:4000](http://localhost:4000).

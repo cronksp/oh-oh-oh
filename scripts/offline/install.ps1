@@ -21,4 +21,6 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "Warning: Automated schema push failed. You may need to manually initialize the database." -ForegroundColor Magenta
 }
 
-Write-Host "Deployment Complete. Whereabouts running on http://localhost:3000" -ForegroundColor Green
+$hostPort = $env:HOST_PORT
+if (-not $hostPort -or $hostPort -eq "") { $hostPort = 3001 }
+Write-Host "Deployment Complete. Whereabouts running on http://localhost:$hostPort" -ForegroundColor Green

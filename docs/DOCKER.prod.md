@@ -20,7 +20,13 @@ This will:
 1.  Build the `whereabouts-app` image.
 2.  Start the `whereabouts` database.
 3.  **Attempt to push the database schema** (requires internet to fallback to a temporary node container).
-4.  Launch the app on port 3000.
+4.  Launch the app, mapped to host port 3001 by default.
+
+To use a different host port, set `HOST_PORT` when invoking compose, for example:
+```bash
+HOST_PORT=4000 docker compose -f docker/docker-compose.prod.yml up -d --build
+```
+Then browse [http://localhost:4000](http://localhost:4000).
 
 ## Section 2: Offline Deployment (Air-Gapped)
 

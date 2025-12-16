@@ -10,4 +10,6 @@ Write-Host "Initializing Database Schema..." -ForegroundColor Cyan
 # Note: This requires internet access to pull node:20-alpine if not present
 docker run --rm --network host -v ${PWD}:/app -w /app node:20-alpine sh -c "retry=0; until nc -z localhost 5432; do echo 'Waiting for DB...'; sleep 1; retry=\$((retry+1)); if [ \$retry -gt 30 ]; then exit 1; fi; done; npm install -g drizzle-kit && npm install drizzle-orm postgres dotenv && npx drizzle-kit push"
 
-Write-Host "Deployment Complete. Whereabouts running on http://localhost:3000" -ForegroundColor Green
+$hostPort = $env:HOST_PORT
+if (-not $hostPort -or $hostPort -eq "") { $hostPort = 3001 }
+Write-Host "Deployment Complete. Whereabouts running on http://localhost:$hostPort" -ForegroundColor Green

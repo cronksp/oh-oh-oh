@@ -7,7 +7,7 @@ services:
       dockerfile: docker/Dockerfile
       target: dev
     ports:
-      - "3000:3000"
+      - "${HOST_PORT:-3001}:3000"
     volumes:
       - ..:/workspace:cached
       - ../log:/app/log

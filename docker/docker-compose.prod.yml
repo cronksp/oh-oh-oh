@@ -8,7 +8,7 @@ services:
       target: runner
     image: whereabouts-app:latest
     ports:
-      - "3000:3000"
+      - "${HOST_PORT:-3001}:3000"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://postgres:postgres_password@postgres:5432/whereabouts
