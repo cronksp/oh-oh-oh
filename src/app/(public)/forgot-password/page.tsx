@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,11 @@ export default function ForgotPasswordPage() {
     const [code, setCode] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     async function handleRequestCode(e: React.FormEvent) {
         e.preventDefault();
@@ -63,62 +68,66 @@ export default function ForgotPasswordPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {step === "email" ? (
-                        <form onSubmit={handleRequestCode} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="name@example.com"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <Button type="submit" className="w-full" disabled={loading}>
-                                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Send Reset Code
-                            </Button>
-                        </form>
+                    {mounted ? (
+                        step === "email" ? (
+                            <form onSubmit={handleRequestCode} className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="email">Email</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        placeholder="name@example.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <Button type="submit" className="w-full" disabled={loading}>
+                                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Send Reset Code
+                                </Button>
+                            </form>
+                        ) : (
+                            <form onSubmit={handleResetPassword} className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="code">Verification Code</Label>
+                                    <Input
+                                        id="code"
+                                        placeholder="123456"
+                                        value={code}
+                                        onChange={(e) => setCode(e.target.value)}
+                                        maxLength={6}
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="new-password">New Password</Label>
+                                    <Input
+                                        id="new-password"
+                                        type="password"
+                                        placeholder="Min 8 characters"
+                                        value={newPassword}
+                                        onChange={(e) => setNewPassword(e.target.value)}
+                                        minLength={8}
+                                        required
+                                    />
+                                </div>
+                                <Button type="submit" className="w-full" disabled={loading}>
+                                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Reset Password
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    className="w-full"
+                                    onClick={() => setStep("email")}
+                                >
+                                    Back to Email
+                                </Button>
+                            </form>
+                        )
                     ) : (
-                        <form onSubmit={handleResetPassword} className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="code">Verification Code</Label>
-                                <Input
-                                    id="code"
-                                    placeholder="123456"
-                                    value={code}
-                                    onChange={(e) => setCode(e.target.value)}
-                                    maxLength={6}
-                                    required
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="new-password">New Password</Label>
-                                <Input
-                                    id="new-password"
-                                    type="password"
-                                    placeholder="Min 8 characters"
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    minLength={8}
-                                    required
-                                />
-                            </div>
-                            <Button type="submit" className="w-full" disabled={loading}>
-                                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Reset Password
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                className="w-full"
-                                onClick={() => setStep("email")}
-                            >
-                                Back to Email
-                            </Button>
-                        </form>
+                        <div className="h-[200px]" />
                     )}
                 </CardContent>
                 <CardFooter className="flex justify-center">

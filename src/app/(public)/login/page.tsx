@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -31,6 +31,11 @@ export default function LoginPage() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -79,69 +84,73 @@ export default function LoginPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                            <FormField
-                                control={form.control}
-                                name="email"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Email</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="m@example.com" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="password"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <div className="flex items-center justify-between">
-                                            <FormLabel>Password</FormLabel>
-                                            <Link
-                                                href="/forgot-password"
-                                                className="text-xs text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
-                                            >
-                                                Forgot password?
-                                            </Link>
-                                        </div>
-                                        <FormControl>
-                                            <div className="relative">
-                                                <Input
-                                                    type={showPassword ? "text" : "password"}
-                                                    {...field}
-                                                />
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                                                    onClick={() => setShowPassword(!showPassword)}
-                                                    tabIndex={-1}
+                    {mounted ? (
+                        <Form {...form}>
+                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                                <FormField
+                                    control={form.control}
+                                    name="email"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Email</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="m@example.com" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="password"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <div className="flex items-center justify-between">
+                                                <FormLabel>Password</FormLabel>
+                                                <Link
+                                                    href="/forgot-password"
+                                                    className="text-xs text-muted-foreground hover:text-primary underline-offset-4 hover:underline"
                                                 >
-                                                    {showPassword ? (
-                                                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                                                    ) : (
-                                                        <Eye className="h-4 w-4 text-muted-foreground" />
-                                                    )}
-                                                    <span className="sr-only">
-                                                        {showPassword ? "Hide password" : "Show password"}
-                                                    </span>
-                                                </Button>
+                                                    Forgot password?
+                                                </Link>
                                             </div>
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                            <Button type="submit" className="w-full" disabled={isLoading}>
-                                {isLoading ? "Logging in..." : "Login"}
-                            </Button>
-                        </form>
-                    </Form>
+                                            <FormControl>
+                                                <div className="relative">
+                                                    <Input
+                                                        type={showPassword ? "text" : "password"}
+                                                        {...field}
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        tabIndex={-1}
+                                                    >
+                                                        {showPassword ? (
+                                                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                                                        ) : (
+                                                            <Eye className="h-4 w-4 text-muted-foreground" />
+                                                        )}
+                                                        <span className="sr-only">
+                                                            {showPassword ? "Hide password" : "Show password"}
+                                                        </span>
+                                                    </Button>
+                                                </div>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <Button type="submit" className="w-full" disabled={isLoading}>
+                                    {isLoading ? "Logging in..." : "Login"}
+                                </Button>
+                            </form>
+                        </Form>
+                    ) : (
+                        <div className="h-[200px]" />
+                    )}
                 </CardContent>
                 <CardFooter className="flex justify-center">
                     <p className="text-sm text-slate-500 dark:text-slate-400">
